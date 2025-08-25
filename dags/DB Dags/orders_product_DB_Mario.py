@@ -2,87 +2,80 @@ from airflow import DAG
 from airflow.providers.google.cloud.transfers.postgres_to_gcs import PostgresToGCSOperator
 from airflow.providers.google.cloud.transfers.gcs_to_bigquery import GCSToBigQueryOperator
 from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobOperator
-from airflow.providers.google.cloud.operators.gcs import GCSDeleteObjectsOperator
-from datetime import datetime
+from airflow.utils.dates import days_ago
+from airflow.models import Variable
 
 PROJECT_ID = "ready-de26"
 BUCKET = "ready-labs-postgres-to-gcs"
-DATASET_LANDING = "project_landing"
 
-SNAPSHOT_FOLDER = "orders_products_db_snapshot_mario"
-STAGE_FOLDER = "orders_products_db_stage_mario"
+# جدول Stage & Landing
+BQ_STAGE_DATASET = "project_stage"
+BQ_LANDING_DATASET = "project_landing"
 
 TABLES = {
-    "order_items": "order_item_id",
-    "order_reviews": "review_id",
-    "orders": "order_id",
-    "products": "product_id",
-    "product_category_name_translation": "product_category_name",
+    "order_items": "public.order_items",
+    "orders": "public.orders",
+    "products": "public.products",
+    "order_reviews": "public.order_reviews",
+    "product_category_name_translation": "public.product_category_name_translation"
 }
 
-default_args = {"start_date": datetime(2025, 1, 1)}
+default_args = {
+    "owner": "airflow",
+    "depends_on_past": False,
+    "retries": 1,
+}
 
 with DAG(
-    dag_id="orders_products_db_pipeline_mario",
+    "orders_products_etl_pipeline",
     default_args=default_args,
+    description="ETL from Postgres -> GCS Snapshot -> BQ Stage -> BQ Landing",
     schedule_interval="@daily",
-    catchup=False,
-    tags=["postgres", "gcs", "bigquery"],
+    start_date=days_ago(1),
+    catchup=True,
+    max_active_runs=1,
 ) as dag:
 
-    for table, pk in TABLES.items():
+    for table_name, pg_table in TABLES.items():
 
-        #  Extract snapshot from Postgres → Snapshot folder
-        snapshot = PostgresToGCSOperator(
-            task_id=f"snapshot_{table}",
+        # 1. Extract: Postgres -> GCS Snapshot
+        extract_to_gcs = PostgresToGCSOperator(
+            task_id=f"extract_{table_name}_to_gcs",
             postgres_conn_id="orders_products_db_mario",
-            sql=f"""
-                SELECT * 
-                FROM public.{table} 
-                WHERE DATE(updated_at_timestamp) = '{{{{ ds }}}}'
-            """,
+            sql=f"SELECT * FROM {pg_table} WHERE updated_at_timestamp::date = '{{{{ ds }}}}'",
             bucket=BUCKET,
-            filename=f"{SNAPSHOT_FOLDER}/{table}/dt={{{{ ds }}}}/{table}.json",
-            export_format="json",
-            gcp_conn_id="google_cloud_default",
+            filename=f"snapshot/orders_products/{table_name}/dt={{{{ ds }}}}/{table_name}.parquet",
+            export_format="parquet",
+            gzip=False,
         )
 
-        # 2️ Load snapshot → Stage folder (overwrite)
-        load_stage = PostgresToGCSOperator(
-            task_id=f"load_stage_{table}",
-            postgres_conn_id="orders_products_db_mario",
-            sql=f"""
-                SELECT * 
-                FROM public.{table} 
-                WHERE DATE(updated_at_timestamp) = '{{{{ ds }}}}'
-            """,
+        # 2. Load: GCS Snapshot -> BQ Stage (overwrite daily)
+        load_to_stage = GCSToBigQueryOperator(
+            task_id=f"load_{table_name}_to_stage",
             bucket=BUCKET,
-            filename=f"{STAGE_FOLDER}/{table}/dt={{{{ ds }}}}/{table}.json",
-            export_format="json",
-            gcp_conn_id="google_cloud_default",
+            source_objects=[f"snapshot/orders_products/{table_name}/dt={{{{ ds }}}}/{table_name}.parquet"],
+            destination_project_dataset_table=f"{PROJECT_ID}.{BQ_STAGE_DATASET}.{table_name}_stage",
+            source_format="PARQUET",
+            write_disposition="WRITE_TRUNCATE",
+            autodetect=True,
         )
 
-        # 3️ Merge stage → Landing table in BigQuery
-        merge_sql = f"""
-        MERGE `{PROJECT_ID}.{DATASET_LANDING}.{table}` T
-        USING `{PROJECT_ID}.{STAGE_FOLDER}.{table}` S
-        ON T.{pk} = S.{pk}
-        WHEN MATCHED THEN UPDATE SET *
-        WHEN NOT MATCHED THEN INSERT ROW
-        """
-
-        merge = BigQueryInsertJobOperator(
-            task_id=f"merge_{table}",
-            configuration={"query": {"query": merge_sql, "useLegacySql": False}},
-            gcp_conn_id="google_cloud_default",
+        # 3. Merge: Stage -> Landing
+        merge_to_landing = BigQueryInsertJobOperator(
+            task_id=f"merge_{table_name}_to_landing",
+            configuration={
+                "query": {
+                    "query": f"""
+                    MERGE `{PROJECT_ID}.{BQ_LANDING_DATASET}.{table_name}_mario` T
+                    USING `{PROJECT_ID}.{BQ_STAGE_DATASET}.{table_name}_stage` S
+                    ON T.order_id = S.order_id  
+                    WHEN MATCHED THEN UPDATE SET *
+                    WHEN NOT MATCHED THEN INSERT ROW
+                    """,
+                    "useLegacySql": False,
+                }
+            },
+            location="US",
         )
 
-        # 4️⃣ Cleanup stage folder after merge
-        cleanup_stage = GCSDeleteObjectsOperator(
-            task_id=f"cleanup_stage_{table}",
-            bucket_name=BUCKET,
-            objects=[f"{STAGE_FOLDER}/{table}/dt={{ ds }}/"],
-            gcp_conn_id="google_cloud_default",
-        )
-
-        snapshot >> load_stage >> merge >> cleanup_stage
+        extract_to_gcs >> load_to_stage >> merge_to_landing
