@@ -3,15 +3,15 @@ from airflow.providers.google.cloud.transfers.postgres_to_gcs import PostgresToG
 from airflow.providers.google.cloud.transfers.gcs_to_bigquery import GCSToBigQueryOperator
 from airflow.providers.google.cloud.operators.bigquery import BigQueryInsertJobOperator
 from airflow.utils.dates import days_ago
-from airflow.models import Variable
 
 PROJECT_ID = "ready-de26"
 BUCKET = "ready-labs-postgres-to-gcs"
 
-
+# Stage & Landing datasets
 BQ_STAGE_DATASET = "project_stage"
 BQ_LANDING_DATASET = "project_landing"
 
+# Original tables in Postgres
 TABLES = {
     "order_items": "public.order_items",
     "orders": "public.orders",
@@ -20,6 +20,19 @@ TABLES = {
     "product_category_name_translation": "public.product_category_name_translation"
 }
 
+# Primary key for each table
+TABLES_PRIMARY_KEYS = {
+    "order_items": "order_item_id",
+    "orders": "order_id",
+    "products": "product_id",
+    "order_reviews": "review_id",
+    "product_category_name_translation": "product_category_name"
+}
+
+# Add your name to Stage & Landing tables
+STAGE_TABLES = {t: f"{t}_stage_mario" for t in TABLES.keys()}
+LANDING_TABLES = {t: f"{t}_mario" for t in TABLES.keys()}
+
 default_args = {
     "owner": "airflow",
     "depends_on_past": False,
@@ -27,7 +40,7 @@ default_args = {
 }
 
 with DAG(
-    "orders_products_etl_pipeline_mario",
+    "orders_products_etl_pipeline",
     default_args=default_args,
     description="ETL from Postgres -> GCS Snapshot -> BQ Stage -> BQ Landing",
     schedule_interval="@daily",
@@ -49,12 +62,12 @@ with DAG(
             gzip=False,
         )
 
-        # 2. Load: GCS Snapshot -> BQ Stage (overwrite daily)
+        # 2. Load: GCS Snapshot -> BQ Stage
         load_to_stage = GCSToBigQueryOperator(
             task_id=f"load_{table_name}_to_stage",
             bucket=BUCKET,
             source_objects=[f"snapshot/orders_products/{table_name}/dt={{{{ ds }}}}/{table_name}.parquet"],
-            destination_project_dataset_table=f"{PROJECT_ID}.{BQ_STAGE_DATASET}.{table_name}_stage",
+            destination_project_dataset_table=f"{PROJECT_ID}.{BQ_STAGE_DATASET}.{STAGE_TABLES[table_name]}",
             source_format="PARQUET",
             write_disposition="WRITE_TRUNCATE",
             autodetect=True,
@@ -66,9 +79,9 @@ with DAG(
             configuration={
                 "query": {
                     "query": f"""
-                    MERGE `{PROJECT_ID}.{BQ_LANDING_DATASET}.{table_name}_mario` T
-                    USING `{PROJECT_ID}.{BQ_STAGE_DATASET}.{table_name}_stage` S
-                    ON T.order_id = S.order_id  
+                    MERGE `{PROJECT_ID}.{BQ_LANDING_DATASET}.{LANDING_TABLES[table_name]}` T
+                    USING `{PROJECT_ID}.{BQ_STAGE_DATASET}.{STAGE_TABLES[table_name]}` S
+                    ON T.{TABLES_PRIMARY_KEYS[table_name]} = S.{TABLES_PRIMARY_KEYS[table_name]}
                     WHEN MATCHED THEN UPDATE SET *
                     WHEN NOT MATCHED THEN INSERT ROW
                     """,
