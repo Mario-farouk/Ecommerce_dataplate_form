@@ -40,7 +40,7 @@ default_args = {
 }
 
 with DAG(
-    "orders_products_etl_pipeline",
+    "orders_products_etl_pipeline_mario",
     default_args=default_args,
     description="ETL from Postgres -> GCS Snapshot -> BQ Stage -> BQ Landing",
     schedule_interval="@daily",
