@@ -8,7 +8,7 @@ from airflow.models import Variable
 PROJECT_ID = "ready-de26"
 BUCKET = "ready-labs-postgres-to-gcs"
 
-# جدول Stage & Landing
+
 BQ_STAGE_DATASET = "project_stage"
 BQ_LANDING_DATASET = "project_landing"
 
