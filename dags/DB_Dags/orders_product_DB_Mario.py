@@ -69,7 +69,7 @@ with DAG(
         # 4. Merge Stage -> Landing
         merge_to_landing = BigQueryInsertJobOperator(
             task_id=f"merge_{table_name}_to_landing",
-            configuration={
+            configuration={ 
                 "query": {
                     "query": merge_sql,
                     "useLegacySql": False,
