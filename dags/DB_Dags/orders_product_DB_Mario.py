@@ -7,7 +7,7 @@ from airflow.utils.dates import days_ago
 
 PROJECT_ID = "ready-de26"
 BUCKET = "ready-labs-postgres-to-gcs"
-BQ_STAGE_DATASET = "project_stage"  
+BQ_STAGE_DATASET = "project_landing"  
 BQ_LANDING_DATASET = "project_landing"
 
 TABLES = {
