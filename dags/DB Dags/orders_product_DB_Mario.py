@@ -7,7 +7,7 @@ from airflow.utils.dates import days_ago
 
 PROJECT_ID = "ready-de26"
 BUCKET = "ready-labs-postgres-to-gcs"
-BQ_STAGE_DATASET = "project_landing"
+BQ_STAGE_DATASET = "project_stage"  
 BQ_LANDING_DATASET = "project_landing"
 
 TABLES = {
@@ -24,8 +24,8 @@ default_args = {
     "retries": 1,
 }
 
-# path to the SQL folder in DAGs
-SQL_FOLDER = "/home/airflow/gcs/dags/mario/SQL/Merge"
+
+SQL_FOLDER = os.path.join(os.path.dirname(__file__), "SQL", "Merge")
 
 with DAG(
     "orders_products_etl_pipeline_mario",
@@ -39,7 +39,7 @@ with DAG(
 
     for table_name, pg_table in TABLES.items():
 
-        # Extract Postgres -> GCS
+        # 1. Extract Postgres -> GCS
         extract_to_gcs = PostgresToGCSOperator(
             task_id=f"extract_{table_name}_to_gcs",
             postgres_conn_id="orders_products_db_mario",
@@ -50,7 +50,7 @@ with DAG(
             gzip=False,
         )
 
-        # Load GCS -> Stage
+        # 2. Load GCS -> Stage
         load_to_stage = GCSToBigQueryOperator(
             task_id=f"load_{table_name}_to_stage",
             bucket=BUCKET,
@@ -61,12 +61,12 @@ with DAG(
             autodetect=True,
         )
 
-        # Read SQL file from DAGs folder
+        # 3. Read SQL file from DAG folder dynamically
         sql_file_path = os.path.join(SQL_FOLDER, f"{table_name}_merge.sql")
         with open(sql_file_path, "r") as f:
             merge_sql = f.read()
 
-        # Merge Stage -> Landing
+        # 4. Merge Stage -> Landing
         merge_to_landing = BigQueryInsertJobOperator(
             task_id=f"merge_{table_name}_to_landing",
             configuration={
