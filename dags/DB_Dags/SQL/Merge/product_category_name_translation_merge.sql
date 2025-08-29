@@ -1,5 +1,5 @@
 MERGE `ready-de26.project_landing.product_category_name_translation_mario` T
-USING `ready-de26.project_stage.product_category_name_translation_stage_mario` S
+USING `ready-de26.project_landing.product_category_name_translation_stage_mario` S
 ON T.product_category_name = S.product_category_name
 WHEN MATCHED THEN
   UPDATE SET

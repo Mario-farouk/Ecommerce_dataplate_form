@@ -1,5 +1,5 @@
 MERGE `ready-de26.project_landing.orders_mario` T
-USING `ready-de26.project_stage.orders_stage_mario` S
+USING `ready-de26.project_landing.orders_stage_mario` S
 ON T.order_id = S.order_id
 WHEN MATCHED THEN
   UPDATE SET

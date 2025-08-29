@@ -1,5 +1,5 @@
 MERGE `ready-de26.project_landing.order_reviews_mario` T
-USING `ready-de26.project_stage.order_reviews_stage_mario` S
+USING `ready-de26.project_landing.order_reviews_stage_mario` S
 ON T.review_id = S.review_id
 WHEN MATCHED THEN
   UPDATE SET
