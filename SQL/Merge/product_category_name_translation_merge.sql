@@ -3,7 +3,12 @@ USING `ready-de26.project_stage.product_category_name_translation_stage_mario` S
 ON T.product_category_name = S.product_category_name
 WHEN MATCHED THEN
   UPDATE SET
-    product_category_name_english = S.product_category_name_english,
-    updated_at_timestamp = S.updated_at_timestamp
+    T.product_category_name_english = S.product_category_name_english,
+    T.updated_at_timestamp = S.updated_at_timestamp
 WHEN NOT MATCHED THEN
-  INSERT ROW;
+  INSERT (
+    product_category_name, product_category_name_english, updated_at_timestamp
+  )
+  VALUES (
+    S.product_category_name, S.product_category_name_english, S.updated_at_timestamp
+  );
