@@ -4,14 +4,14 @@ ON T.product_id = S.product_id
 WHEN MATCHED THEN
   UPDATE SET
     T.product_category_name = S.product_category_name,
-    T.product_name_length = S.product_name_length,
-    T.product_description_length = S.product_description_length,
-    T.product_photos_qty = S.product_photos_qty,
-    T.product_weight_g = S.product_weight_g,
-    T.product_length_cm = S.product_length_cm,
-    T.product_height_cm = S.product_height_cm,
-    T.product_width_cm = S.product_width_cm,
-    T.updated_at_timestamp = S.updated_at_timestamp
+    T.product_name_length = CAST(S.product_name_length AS INT64),
+    T.product_description_length = CAST(S.product_description_length AS INT64),
+    T.product_photos_qty = CAST(S.product_photos_qty AS INT64),
+    T.product_weight_g = CAST(S.product_weight_g AS INT64),
+    T.product_length_cm = CAST(S.product_length_cm AS INT64),
+    T.product_height_cm = CAST(S.product_height_cm AS INT64),
+    T.product_width_cm = CAST(S.product_width_cm AS INT64),
+    T.updated_at_timestamp = CAST(S.updated_at_timestamp AS TIMESTAMP)
 WHEN NOT MATCHED THEN
   INSERT (
     product_id, product_category_name, product_name_length, 
@@ -19,7 +19,9 @@ WHEN NOT MATCHED THEN
     product_length_cm, product_height_cm, product_width_cm, updated_at_timestamp
   )
   VALUES (
-    S.product_id, S.product_category_name, S.product_name_length, 
-    S.product_description_length, S.product_photos_qty, S.product_weight_g,
-    S.product_length_cm, S.product_height_cm, S.product_width_cm, S.updated_at_timestamp
+    S.product_id, S.product_category_name, CAST(S.product_name_length AS INT64), 
+    CAST(S.product_description_length AS INT64), CAST(S.product_photos_qty AS INT64), 
+    CAST(S.product_weight_g AS INT64), CAST(S.product_length_cm AS INT64), 
+    CAST(S.product_height_cm AS INT64), CAST(S.product_width_cm AS INT64), 
+    CAST(S.updated_at_timestamp AS TIMESTAMP)
   );

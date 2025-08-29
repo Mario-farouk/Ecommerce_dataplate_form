@@ -6,10 +6,10 @@ WHEN MATCHED THEN
     T.order_id = S.order_id,
     T.product_id = S.product_id,
     T.seller_id = S.seller_id,
-    T.shipping_limit_date = S.shipping_limit_date,
-    T.price = S.price,
-    T.freight_value = S.freight_value,
-    T.updated_at_timestamp = S.updated_at_timestamp
+    T.shipping_limit_date = CAST(S.shipping_limit_date AS TIMESTAMP),
+    T.price = CAST(S.price AS NUMERIC),
+    T.freight_value = CAST(S.freight_value AS NUMERIC),
+    T.updated_at_timestamp = CAST(S.updated_at_timestamp AS TIMESTAMP)
 WHEN NOT MATCHED THEN
   INSERT (
     order_item_id, order_id, product_id, seller_id, 
@@ -17,5 +17,8 @@ WHEN NOT MATCHED THEN
   )
   VALUES (
     S.order_item_id, S.order_id, S.product_id, S.seller_id, 
-    S.shipping_limit_date, S.price, S.freight_value, S.updated_at_timestamp
+    CAST(S.shipping_limit_date AS TIMESTAMP),
+    CAST(S.price AS NUMERIC),
+    CAST(S.freight_value AS NUMERIC),
+    CAST(S.updated_at_timestamp AS TIMESTAMP)
   );

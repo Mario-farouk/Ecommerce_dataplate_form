@@ -4,11 +4,12 @@ ON T.product_category_name = S.product_category_name
 WHEN MATCHED THEN
   UPDATE SET
     T.product_category_name_english = S.product_category_name_english,
-    T.updated_at_timestamp = S.updated_at_timestamp
+    T.updated_at_timestamp = CAST(S.updated_at_timestamp AS TIMESTAMP)
 WHEN NOT MATCHED THEN
   INSERT (
     product_category_name, product_category_name_english, updated_at_timestamp
   )
   VALUES (
-    S.product_category_name, S.product_category_name_english, S.updated_at_timestamp
+    S.product_category_name, S.product_category_name_english, 
+    CAST(S.updated_at_timestamp AS TIMESTAMP)
   );
