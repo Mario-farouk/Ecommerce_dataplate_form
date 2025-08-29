@@ -11,8 +11,8 @@ BUCKET = "ready-labs-postgres-to-gcs"
 BQ_DATASET = "project_landing"  # Both stage and landing in same dataset
 
 # Specific date we want to process
-TARGET_DATE = "2025-08-22"
-TARGET_DATE_NODASH = "20250822"  # For file paths
+TARGET_DATE = "2025-08-24"
+TARGET_DATE_NODASH = "20250824"  # For file paths
 
 TABLES = {
     "order_items": "public.order_items",
@@ -33,14 +33,14 @@ default_args = {
 }
 
 with DAG(
-    "orders_products_etl_pipeline_20250822",
-    description="ETL pipeline for specific date 2025-08-22",
+    "orders_products_etl_pipeline_mario",
+    description="ETL pipeline for specific date ",
     schedule_interval=None,   # Manual trigger only
     start_date=datetime(2025, 8, 22),
     catchup=False,
     max_active_runs=1,
     default_args=default_args,
-    tags=['gcp', 'etl', 'postgres', 'bigquery', '2025-08-22'],
+    tags=['gcp', 'etl', 'postgres', 'bigquery'],
 ) as dag:
 
     start_pipeline = DummyOperator(task_id="start_pipeline")
