@@ -1,5 +1,17 @@
 MERGE `ready-de26.project_landing.order_reviews_mario` T
-USING `ready-de26.project_landing.order_reviews_stage_mario` S
+USING (
+  SELECT 
+    review_id,
+    ANY_VALUE(order_id) as order_id,
+    ANY_VALUE(review_score) as review_score,
+    ANY_VALUE(review_comment_title) as review_comment_title,
+    ANY_VALUE(review_comment_message) as review_comment_message,
+    ANY_VALUE(review_creation_date) as review_creation_date,
+    ANY_VALUE(review_answer_timestamp) as review_answer_timestamp,
+    ANY_VALUE(updated_at_timestamp) as updated_at_timestamp
+  FROM `ready-de26.project_landing.order_reviews_stage_mario`
+  GROUP BY review_id
+) S
 ON T.review_id = S.review_id
 WHEN MATCHED THEN
   UPDATE SET

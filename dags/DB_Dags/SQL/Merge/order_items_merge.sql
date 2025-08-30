@@ -1,6 +1,7 @@
 MERGE `ready-de26.project_landing.order_items_mario` T
 USING `ready-de26.project_landing.order_items_stage_mario` S
-ON T.order_item_id = S.order_item_id
+ON T.order_item_id = S.order_item_id 
+AND DATE(T.updated_at_timestamp) = DATE(S.updated_at_timestamp)  -- ← PARTITIONING KEY
 WHEN MATCHED THEN
   UPDATE SET
     T.order_id = S.order_id,
