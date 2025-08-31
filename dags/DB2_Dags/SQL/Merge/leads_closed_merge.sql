@@ -49,4 +49,3 @@ WHEN NOT MATCHED THEN
     S.has_company, S.has_gtin, S.average_stock, S.business_type,
     S.declared_product_catalog_size, S.declared_monthly_revenue, S.updated_at_timestamp
   );
-  
