@@ -11,7 +11,7 @@ BUCKET = "ready-labs-postgres-to-gcs"
 BQ_DATASET = "project_landing"  # Both stage and landing in same dataset
 
 # Specific date we want to process
-TARGET_DATE = "2025-08-22"
+TARGET_DATE = "2025-08-23"
 TARGET_DATE_NODASH = "20250822"  # For file paths
 
 TABLES = {"customers": "public.customers",
