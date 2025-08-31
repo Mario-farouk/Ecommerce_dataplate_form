@@ -1,7 +1,7 @@
 MERGE `ready-de26.project_landing.leads_qualified_mario` T
 USING (
   SELECT 
-    lead_id,
+    mql_id as lead_id,
     ANY_VALUE(customer_id) as customer_id,
     ANY_VALUE(lead_status) as lead_status,
     ANY_VALUE(CAST(qualified_date AS TIMESTAMP)) as qualified_date,
